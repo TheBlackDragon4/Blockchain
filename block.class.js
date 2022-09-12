@@ -1,44 +1,71 @@
-// const { sha256 } = require('./sha256');
-
 class Block {
-
-    /**
-     * Konstruktur für die Erstellung eines neuen Blocks
-     * 
-     * @param {*} time Gibt aktuelle Zeit in Millisekunden die seit 01.01.1970 vergangen ist
-     * @param {*} data Mitgelieferte Daten
-     * @param {*} nonce Zusätzliche Variable die innerhalb vom Block beinhaltet ist
-     * @param {*} difficulty schnell bei einer '0' -> Je mehr '0er' desto länger das Mining
-     */
-    constructor (time = Date.now(), data = {}){
+    constructor(time = Date.now(), data = {}) {
         this.time = time;
         this.data = data;
-        this.lastHash = ''; // Fingerabdruck vom vorhergehenden Block
+        this.lastHash = '';
         this.nonce = 0;
-        this.difficulty = '0000' // Index Difficulty
+        this.difficulty = '00';
+        this.kill = false;
     }
 
-    /**
-     * Sobald sich eine Variable ändert, ändert sich der gesamte Block
-     * JSON.stringify = Umwandung des Outputs in einen Text
-     * @return Hash des aktuellen Blocks
-     */
     createHash() {
         return sha256(this.nonce + this.lastHash + this.time + JSON.stringify(this.data));
     }
 
-    /**
-     * hash = Speicherung des errechneten Hash aus "createHash()"
-     */
     mine() {
         let hash = this.createHash();
-        while(!hash.startsWith(this.difficulty)){ 
-            this.nonce++; // Solange durchgeführt bis Hash mit '00' startet
-            hash = this.createHash();
-        }
-
+        return new Promise((resolve, reject) => {
+            let i = setInterval(() => {
+                if (this.kill) {
+                    clearInterval(i);
+                    reject();
+                } else if (hash.startsWith(this.difficulty)) {
+                    clearInterval(i);
+                    this.resolveTransactions();
+                    resolve();
+                } else {
+                    this.nonce++;
+                    hash = this.createHash();
+                }
+            }, 1000 / 30);
+        });
     }
 
-}
+    resolveTransactions() {
+        let transactions = this.data.transactions;
+        transactions.forEach(transaction => {
+            this.addMoney(transaction.from, transaction.to, transaction.amount);
+        });
+    }
 
-// exports.Block = Block;
+    addMoney(sender, receiver, amount) {
+        let moneyTable = this.data.moneyTable || [];
+        let entry = moneyTable.find(e => e.name == receiver);
+        if (!entry) {
+            entry = { name: receiver, amount: 0 };
+            moneyTable.push(entry);
+        }
+
+        if (sender != 'BlockReward') {
+            let entrySender = moneyTable.find(e => e.name == sender);
+            if (!entrySender) {
+                entrySender = { name: receiver, amount: 0 };
+                moneyTable.push(entrySender);
+            }
+            entrySender.amount -= amount;
+        }
+
+        entry.amount += amount;
+        console.log('UPDATED TABLE', moneyTable);
+        this.data.moneyTable = moneyTable;
+        updateGraphData(moneyTable);
+    }
+
+    mineOld() {
+        let hash = this.createHash();
+        while (!hash.statsWith(this.difficulty)) {
+            this.nonce++;
+            hash = this.createHash();
+        }
+    }
+}
