@@ -3,6 +3,11 @@ class MiningNode {
     isMining = false;
     currentBlock;
 
+    /**
+     * 
+     * @param {*} id hier entweder 0, 1 oder 2
+     * @param {*} name Name der Miningnode für den Konstrukor 
+     */
     constructor(id, name) {
         this.id = id;
         this.name = name;
@@ -21,6 +26,10 @@ class MiningNode {
         });
     }
 
+    /**
+     * Toggle Funktion soll das Mining anschalten oder ausschalten in Abhängigkeit der 
+     * Variable isMining
+     */
     toggle() {
         this.isMining = !this.isMining;
         if (this.isMining) {
@@ -30,6 +39,9 @@ class MiningNode {
         }
     }
 
+    /**
+     * Dient dafür, den aktuellen zu Minenden Block abzubrechen
+     */
     killCurrentBlock() {
         if (this.currentBlock) {
             this.currentBlock.kill = true;
@@ -37,6 +49,9 @@ class MiningNode {
         this.blockData = { transactions: [{ from: 'BlockReward', to: this.name, amount: 5 }] };
     }
 
+    /**
+     * Soll anzeigen, ob die Node aktuell arbeitet oder nichts macht
+     */
     async mine() {
         renderCurrentTransactions(this.blockData.transactions);
         this.currentBlock = new Block(Date.now(), this.blockData);
